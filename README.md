@@ -78,8 +78,6 @@ Under Traffic Demands\Das Demand add the relevant matrices, and possibly set a F
 
 # Status
 ## BUGS
-- Creating new matrices instead of updating existing ones
-- Matrix names were not properly aligned
 
 
 # Links

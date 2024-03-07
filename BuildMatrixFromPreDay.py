@@ -24,7 +24,7 @@ id_fn = os.path.join(PROJECT_PATH, 'Id.csv')
 
 START_TIMES_RANGE = list(range(6, 24))
 # only do first 10 for now
-START_TIMES_RANGE = START_TIMES_RANGE[0:10]
+START_TIMES_RANGE = START_TIMES_RANGE[0:4]
 
 # ==============
 
@@ -48,8 +48,8 @@ def getStartTimes():
 def getMatrixNames(mode):
 	res = []
 	for i in START_TIMES_RANGE:
-		res.append(f'matrix_{i+0.25}_{mode}')
-		res.append(f'matrix_{i+0.75}_{mode}')
+		res.append(f'matrix_{i+0.25:0>5.2f}_{mode}')
+		res.append(f'matrix_{i+0.75:0>5.2f}_{mode}')
 
 	return res
 
