@@ -1,6 +1,9 @@
 import pandas as pd
 import sys
 from importlib import reload
+from functools import lru_cache
+from db import readCentIDsCSV, createEngine
+from sqlalchemy.orm import Session
 
 # Add Aimsum path to module resolution
 sys.path.append('C:/Program Files/Aimsun/Aimsun Next 23/plugins/python')
@@ -8,38 +11,22 @@ sys.path.append('C:/Program Files/Aimsun/Aimsun Next 23/plugins/python')
 from PyANGBasic import *
 from PyANGKernel import *
 from PyANGConsole import *
+from PyQt5.QtCore import QTime
 
 import os
 import SortByMode
 reload(SortByMode)
 
-# ==============
-# Configuration
-# ==============
-MODES = ['Car']
-
-PROJECT_PATH = 'C:\\Users\\mehou\\Documents\\Aimsum\\BaseCase1122'
-das_fn = os.path.join(PROJECT_PATH, 'November_Base_Case_Aggregate')
-id_fn = os.path.join(PROJECT_PATH, 'Id.csv')
-
-START_TIMES_RANGE = list(range(6, 24))
-# only do first 10 for now
-START_TIMES_RANGE = START_TIMES_RANGE[0:4]
-
-# ==============
+import settings
+reload(settings)
 
 
-def readDAS():
-	#das.columns = ['person_id', 'tour_no', 'tour_type', 'stop_no', 'stop_type', 'stop_location', 'stop_zone','stop_mode', 'primary_stop', 'arrival_time', 'departure_time', 'prev_stop_location', 'prev_stop_zone', 'prev_stop_departure_time', 'drivetrain', 'make', 'model']
-	return pd.read_csv(das_fn,header='infer')
 
-def readCentIDs():
-	return pd.read_csv(id_fn,header='infer')
 
 def getStartTimes():
 	# all start time possible
 	res = []
-	for i in START_TIMES_RANGE:
+	for i in settings.START_TIMES_RANGE:
 		res.append(QTime(i,0,0,0))
 		res.append(QTime(i,30,0,0))
 	
@@ -47,7 +34,7 @@ def getStartTimes():
 
 def getMatrixNames(mode):
 	res = []
-	for i in START_TIMES_RANGE:
+	for i in settings.START_TIMES_RANGE:
 		res.append(f'matrix_{i+0.25:0>5.2f}_{mode}')
 		res.append(f'matrix_{i+0.75:0>5.2f}_{mode}')
 
@@ -55,7 +42,7 @@ def getMatrixNames(mode):
 
 def getSimmobilityTimes():
 	res = []
-	for i in START_TIMES_RANGE:
+	for i in settings.START_TIMES_RANGE:
 		res.append(i+0.25)
 		res.append(i+0.75)
 	
@@ -69,6 +56,7 @@ def getActiveCentroid(model):
 			return cent
 	return None
 
+@lru_cache
 def getVehicleByName(model, name):
 	vvt_list=GK.GetObjectsOfType(model.getType("GKVehicle"))  ##  the vechule type list
 	for vvt in vvt_list :
@@ -97,22 +85,27 @@ def getMatrixByName(active_centroid, name):
 			return mat
 	return None
 
+engine = createEngine()
+conn = engine.connect()
 
 def build(model):
 	### Choose the mode
-	das = readDAS()
-	centroid_ids = readCentIDs()
+	#das = readDASCSV()
+	centroid_ids = readCentIDsCSV()
+	
+	session = Session(conn)
 
 	matrix_start_times = getStartTimes()
 	simmobility_times = getSimmobilityTimes()
 
-	for mode in MODES:
+	for mode in settings.MODES:
 		### all name posible
 		matrix_names = getMatrixNames(mode)
 
 		### for all time from start to end
 		for t in range(len(matrix_start_times))  :
-			OD_data=SortByMode.sort(das,mode,t,centroid_ids, simmobility_times) ## Builed trips matrix in external founctuin by mode and time
+			#OD_data=SortByMode.sort(das,mode,t,centroid_ids, simmobility_times) ## Builed trips matrix in external founctuin by mode and time
+			OD_data=SortByMode.getODMatrix(session, mode, simmobility_times[t], centroid_ids) 
 			OD_data_list=OD_data.values.tolist() ### make list from this dataframe
 
 			active_centroid = getActiveCentroid(model)

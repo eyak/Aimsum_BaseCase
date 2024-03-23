@@ -31,6 +31,18 @@ Follow this [guide](https://docs.aimsun.com/next/22.0.1/UsersManual/ScriptIntro.
 - Restart Aimsum, and verify you can import the libs correctly.
 
 
+## Installing SQLITE3/Workaround
+When trying to import sqlite3 in Aimsum python scripts, I got this error:
+
+    "DLL load failed while importing _sqlite3: The specified procedure could not be found."
+
+To fix this, download SQLite3.dll 64bit from [Sqlite Website](https://www.sqlite.org/download.html).
+Backup the original dll from
+```
+C:\Program Files\Aimsun\Aimsun Next 23
+```
+And then replace the dll with the new one. The problem is probably due to different version in new python environment installation and original sqlite3 version supplied by Aimsum, Hopefuly this workaround does not create new issues down the road.
+
 # Simulation Setup
 ## Base case files
 https://www.dropbox.com/personal/Base_Case_November
@@ -77,6 +89,13 @@ Under Traffic Demands\Das Demand add the relevant matrices, and possibly set a F
 
 
 # Status
+Migrate sort to db version,
+however cannot import sqlite version in aimsum,
+probably a version conflict with python sqlite version,
+removed sqlite dll from local python installation, but now cannot recover them
+sqlite3 import in aimsum still fails.!.!. :(
+probably reinstall python
+
 ## BUGS
 
 

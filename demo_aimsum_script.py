@@ -1,7 +1,5 @@
-# This is a blank aimsum script, 
-# which should be created in Aimsum to use these functions
-
 from importlib import reload
+import traceback
 import BuildMatrixFromPreDay
 
 # force reloading the module in case the file has been modified
@@ -9,5 +7,10 @@ import BuildMatrixFromPreDay
 reload(BuildMatrixFromPreDay)
 
 print('Building...')
-BuildMatrixFromPreDay.build(model)
+try:
+	BuildMatrixFromPreDay.build(model)
+except Exception as e:
+	# pretty print exceptions because Aimsum doesn't
+	for line in traceback.format_exc().split('\n'):
+		print(line)
 print('Done')
