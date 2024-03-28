@@ -9,7 +9,7 @@ Open Aimsum licenser; c:\progam files\Aimsum\Licenser\Aimsum Licenser
 Sign in with provided username and password, and ‘Acquire’ a license.
 
 ## Troubleshooting
-If you receive ‘Cannot connect to server’ when running the licensor, try using another wifi, Free-TAU is blocking the server.
+If you receive ‘Cannot connect to server’ when running the licenser, try using another network, Free-TAU is blocking the server.
 
 ## Installing Script Dependencies
 Follow this [guide](https://docs.aimsun.com/next/22.0.1/UsersManual/ScriptIntro.html#:~:text=Always%20choose%20the%20most%20recent%20version%20of%20Python%203%20available.) to install required python dependencies like pandas, and numpy.
@@ -28,6 +28,9 @@ Follow this [guide](https://docs.aimsun.com/next/22.0.1/UsersManual/ScriptIntro.
     ```
 - Go to windows system properties
 - Set environment variable PYTHONPATH to these folders (change to your <username>, and separate folders with “;” ):
+    ```
+    C:\Users\<username>\AppData\Local\Programs\Python\Python310\DLLs;C:\Users\<username>\AppData\Local\Programs\Python\Python310\lib;C:\Users\<username>\AppData\Local\Programs\Python\Python310\lib\site-packages;
+    ```
 - Restart Aimsum, and verify you can import the libs correctly.
 
 
