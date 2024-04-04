@@ -52,10 +52,14 @@ def getDASDF(session, limit = None, stop_mode = None, removeExternalZones = Fals
     
     return pd.read_sql_query(query.statement, session.bind, index_col='row_id')
 
-def createEngine():
+def createInputEngine():
     # Create an engine that stores data in the local directory's
     # sqlalchemy_example.db file.
     engine = sqlalchemy.create_engine(settings.das_db_uri)
+    return engine
+
+def createResEngine():
+    engine = sqlalchemy.create_engine(settings.res_db_uri)
     return engine
 
 def mergeAimsunZone(das, centroid_ids):
@@ -74,10 +78,12 @@ if __name__ == "__main__":
     # sqlalchemy_example.db file.
 
     print('Creating DB...')
-    engine = createEngine()
+    input_eng = createInputEngine()
+
 
     # Create a connection to the engine called conn
-    conn = engine.connect()
+    conn = input_eng.connect()
+
 
 
     print('Populating DB...')

@@ -21,7 +21,7 @@ Follow this [guide](https://docs.aimsun.com/next/22.0.1/UsersManual/ScriptIntro.
     import sys
     print(sys.version)
     ```
-- Download python for windows with the same version - like 3.10.
+- Download python for windows with the same major version - for Aimsum with python 3.10.5, install the latest python 3.10 (Currently 3.10.11).
 - Install required libraries using cmd:
     ```
     pip install pandas
@@ -29,7 +29,7 @@ Follow this [guide](https://docs.aimsun.com/next/22.0.1/UsersManual/ScriptIntro.
 - Go to windows system properties
 - Set environment variable PYTHONPATH to these folders (change to your <username>, and separate folders with “;” ):
     ```
-    C:\Users\<username>\AppData\Local\Programs\Python\Python310\DLLs;C:\Users\<username>\AppData\Local\Programs\Python\Python310\lib;C:\Users\<username>\AppData\Local\Programs\Python\Python310\lib\site-packages;
+C:\Users\<username>\AppData\Local\Programs\Python\Python310\lib;C:\Users\<username>\AppData\Local\Programs\Python\Python310\lib\site-packages;
     ```
 - Restart Aimsum, and verify you can import the libs correctly.
 
@@ -88,16 +88,22 @@ External dependencies:
 - SortByMode…py
 
 ## Add OD Matrices to Demand
-Under Traffic Demands\Das Demand add the relevant matrices, and possibly set a Factor to dilute matrices for quick runs.
+Under Traffic Demands\Das Demand add the relevant matrices, and possibly set a Factor to dilute matrices for quick runs. 0.01% Takes a few minutes to complete.
 
+## Scenario
+### Convergence Criteria
+Under Scenarios/Network/Meso DUE gradient, in the Dyamic traffic assignment tab, the equilibrium condition is defined - 40 iterations or 0.5 gap ![Equilbrium](images/Equilibrium.png)
+
+### Incremental Scenario
+To speed up convergence, the scenario is set up to incrementally add vehicles and fill the network, under Scenarios/Network/Meso DUE gradient/100%; 3 incremental iterations are defined. Each should converge using the convergence criteria, and only the last iteration is the convergeed 100% scenario.
+
+
+
+## Run sequence
+- Generate OD Matrices by running BuildMatrixFromPreDayExternal
+- Add matrices to Demand data (Traffice demands\ Das Demand) ![Demand setup](images/Demand%20data.png)
 
 # Status
-Migrate sort to db version,
-however cannot import sqlite version in aimsum,
-probably a version conflict with python sqlite version,
-removed sqlite dll from local python installation, but now cannot recover them
-sqlite3 import in aimsum still fails.!.!. :(
-probably reinstall python
 
 ## BUGS
 
