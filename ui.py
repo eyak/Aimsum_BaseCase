@@ -1,6 +1,6 @@
 import streamlit as st
 import db
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, func, desc
 from sqlalchemy.orm import Session
 from sqlalchemy import MetaData
 from sqlalchemy import create_engine, Table
@@ -8,12 +8,17 @@ from model import DAS
 from resmodel import MESYS
 import pandas as pd
 from settings import *
+import plotly.express as px
+from aimsumtables import *
 #import sqlite3
 
 # some warning bug in streamlit
-# see https://github.com/streamlit/streamlit/iss    ues/1430
+# see https://github.com/streamlit/streamlit/issues/1430
 import warnings
 warnings.filterwarnings('ignore')
+
+RUNS_CSV = 'runs.csv'
+
 
 def showCSVStats():
     das = db.readDASCSV()
@@ -21,27 +26,236 @@ def showCSVStats():
     st.write('Number of rows in DAS CSV')
     st.write(das.shape[0])
 
-
-def showTable(session, table_name):
+@st.cache_data
+def loadTable(_session, table_name):
     metadata = MetaData()
-    metadata.reflect(bind=session.bind)
+    metadata.reflect(bind=_session.bind)
     table = Table(table_name, metadata, autoload=True)
 
-    df = pd.read_sql_query(session.query(table).limit(1000).statement, session.bind)
+    return table
+
+@st.cache_data
+def getTableCount(_session, table_name):
+    table = loadTable(_session, table_name)
+
+    return _session.query(table).count()
+
+@st.cache_data
+def getTableDF(_session, table_name, limit = None):
+    table = loadTable(_session, table_name)
+
+    if limit:
+        return pd.read_sql_query(_session.query(table).limit(limit).statement, _session.bind)
+    else:
+        return pd.read_sql_query(_session.query(table).statement, _session.bind)
+
+def readRunsCSV():
+    if os.path.exists(RUNS_CSV):
+        df = pd.read_csv(RUNS_CSV)
+        return df
+    else:
+        st.warning(f'File {RUNS_CSV} not found')
+        return pd.DataFrame()
+
+def showTable(session, table_name, limit = 1000):
+    df = getTableDF(session, table_name)
     st.write(df)
 
 def showResults(res_session):
-    listTables(res_session.bind)
+    tables = listTables(res_session.bind)
+    st.write('Existing tables ; ' + ', '.join(tables))
 
-    for table_name in ['SIM_INFO', 'MESYS', 'MESECT']:
+    for table_name in ['SIM_INFO', 'META_INFO', 'META_SUB_INFO', 'MESYS', 'MESECT']:
         st.subheader(table_name)
-        showTable(res_session, table_name)
+        count = getTableCount(res_session, table_name)
+        st.write(f'{count:,d} rows in {table_name} table')
+        df = getTableDF(res_session, table_name, limit=1000)
+        st.write(df)
 
+
+def mergeNameTime(res_session, df):
+    info = getTableDF(res_session, 'SIM_INFO')[['did', 'didname', 'scname', 'twhen']]
+    runs = readRunsCSV()
+    info = pd.merge(info, runs, on='did', how='left', validate='one_to_one')
+
+    df = pd.merge(df, info, on='did', how='left', validate='many_to_one')
+    df['twhen'] = pd.to_datetime(df['twhen'])
+    # create time, ent=1 is 6:15, add 15 minutes for each ent
+    df['Time'] = df['twhen'] + pd.to_timedelta(6.25, unit='h') + pd.to_timedelta(df['ent'] * 15, unit='m')
+
+    return df
+
+def showWholeStats(res_session, dids):
+    df = getTableDF(res_session, 'MESYS')
+
+    # filter by dids
+    df = df[df['did'].isin(dids)]
+
+    # filter for aggregated data only by ent=0
+    df = df[df['ent'] != 0]
+
+    # filter for total traffic sid=0
+    df = df[df['sid'] == 0]
+
+    # sort data by order of dids in the dids list
+    df['did'] = pd.Categorical(df['did'], dids)
+    df = df.sort_values(['did', 'ent'])
+
+    df = mergeNameTime(res_session, df)
+
+    # did,oid,eid,sid,ent,density,density_D,flow,flow_D,input_flow,input_flow_D,
+    # input_count,input_count_D,gridlock_vehs,gridlock_vehs_D,ttime,ttime_D,dtime,dtime_D,
+    # wtimeVQ,wtimeVQ_D,speed,speed_D,spdh,spdh_D,travel,travel_D,traveltime,traveltime_D,
+    # vWait,vWait_D,vIn,vIn_D,vOut,vOut_D,totalDistanceTraveledInside,totalDistanceTraveledInside_D
+    # totalTravelTimeInside,totalTravelTimeInside_D,totalWaitingTime,totalWaitingTime_D,vLostIn,vLostIn_D,
+    # vLostOut,vLostOut_D,qmean,qmean_D,qvmean,qvmean_D,missedTurnings,missedTurnings_D,lane_changes,
+    # lane_changes_D,total_lane_changes,total_lane_changes_D,didname,scname,twhen,Time
+    
+    target = st.selectbox('Variable', sorted(MESYS_STATS.keys()), index=1, format_func=lambda x: f"{x} ({MESYS_STATS[x]['label']})")
+    logScale = st.checkbox('Log Scale', False)
+    #st.write(df[['didname']+list(target_stats.keys())])
+
+    label = MESYS_STATS[target]['label']
+    units = MESYS_STATS[target]['units']
+
+    data = df[['didlabel', 'Time', target]]
+
+    # plotly bar chart
+    fig = px.line(data, x='Time', color='didlabel', y=target)
+    fig.update_layout(title=f'{label}', xaxis_title='Time', yaxis_title=units)
+    fig.update_xaxes(
+        tickformat="%H:%M", # the date format you want 
+    )
+    if logScale:
+        fig.update_yaxes(type="log")
+    st.plotly_chart(fig, config = {'toImageButtonOptions': {
+            'scale': 2,
+            'filename': f'{target} - dids {" ".join(map(str,dids))} Overall'
+        }})
+        
+
+def showSectionsStats(res_session, dids):
+    table = loadTable(res_session, 'MESECT')
+
+    grpoid = pd.read_sql_query(
+        select(
+            table.c.did, table.c.oid,
+            func.count('*').label('rows'),
+            func.sum(table.c.input_count).label('input_count_sum'),
+            func.avg(table.c.input_count).label('flow_capacity_avg')
+            )
+        .filter(table.c.did.in_(dids))
+        .filter(table.c.sid == 0) # total traffic only
+        .group_by(table.c.did, table.c.oid)
+        .order_by(desc("input_count_sum")),
+        res_session.bind)
+
+    # add select col
+    grpoid.insert(0, 'select', False)
+
+    res = st.data_editor(grpoid)
+
+    selected_oids = set(res[res['select'] == True]['oid'].to_list())
+    st.write(f'Selected OIDs: {selected_oids}')
+
+    secdf = pd.read_sql_query(
+        select('*')
+        .filter(table.c.did.in_(dids))
+        .filter(table.c.sid == 0) # total traffic only
+        .filter(table.c.ent != 0) # ignore aggregated data
+        .filter(table.c.oid.in_(selected_oids)) ,
+        res_session.bind)
+
+    secdf = mergeNameTime(res_session, secdf)
+    secdf['did'] = pd.Categorical(secdf['did'], dids)
+    #secdf = df.sort_values(['did', 'ent'])
+
+    target = st.selectbox('Variable', sorted(MESECT_STATS.keys()), index=1, format_func=lambda x: f"{x} ({MESECT_STATS[x]['label']})")
+    selSingle = st.checkbox('Single Chart', True)
+
+    label = MESECT_STATS[target]['label']
+    units = MESECT_STATS[target]['units']
+
+    if selSingle:
+        data = secdf[['did', 'didname', 'Time', 'oid', target]]
+        data['label'] = data['oid'].astype(str) + ', ' + data['didname']
+
+        data = data.sort_values(['oid', 'did', 'Time'])
+
+        # plotly bar chart
+        fig = px.line(data, x='Time', color='didname', symbol='oid', y=target)
+        fig.update_layout(title=f'Section {label}', xaxis_title='Time', yaxis_title=units)
+        fig.update_xaxes(
+            tickformat="%H:%M", # the date format you want 
+        )
+        st.plotly_chart(fig, config = {'toImageButtonOptions': {
+            'scale': 2,
+            'filename': f'{target} - dids {" ".join(map(str,dids))} - oids {" ".join(map(str,selected_oids))}'
+        }})
+
+    else:
+        for oid in selected_oids:
+            data = secdf[secdf['oid'] == oid][['didname', 'Time', target]]
+
+            data = data.sort_values(['Time'])
+
+            # plotly bar chart
+            fig = px.line(data, x='Time', color='didname', y=target)
+            fig.update_layout(title=f'Section {oid} {label}', xaxis_title='Time', yaxis_title=units)
+            fig.update_xaxes(
+                tickformat="%H:%M", # the date format you want 
+            )
+            st.plotly_chart(fig)
+
+    #st.write(secdf)
+
+    
+
+def getSimulations(res_session):
+    df = getTableDF(res_session, 'SIM_INFO')
+    df['exec_date'] = pd.to_datetime(df['exec_date'])
+    df['exec_date_end'] = pd.to_datetime(df['exec_date_end'])
+    df['exec_duration'] = df['exec_date_end'] - df['exec_date']
+    return df
+
+def showSimulations(res_session):
+    df = getSimulations(res_session)
+
+    runs = readRunsCSV()
+
+    df = pd.merge(df, runs, left_on='did', right_on='did', how='left', validate='one_to_one')
+
+    # add select boolean column as first col
+    df.insert(0, 'show order', 0)
+
+    if 'selected_dids' in st.session_state:
+        print('selected_dids', st.session_state['selected_dids'])
+        selected_dids = st.session_state['selected_dids']
+
+        df.loc[df['did'].isin(selected_dids), 'show order'] = df[df['did'].isin(selected_dids)].apply(lambda row: selected_dids.index(row['did'])+1, axis=1)
+
+    
+    res = st.data_editor(df[['show order', 'did', 'didlabel', 'comments', 'didname', 'scname', 'exec_date', 'exec_duration']], key='diddata')
+
+    selected_dids = res[res['show order'] > 0].sort_values('show order')['did'].to_list()
+
+    st.write(f'Selected DIDs: {selected_dids}')
+    if st.button('Save Selection'):
+        st.session_state['selected_dids'] = selected_dids
+
+
+    tab1, tab2 = st.tabs(['Whole Stats', 'Sections Stats'])
+    with tab1:
+        showWholeStats(res_session, selected_dids)
+    with tab2:
+        showSectionsStats(res_session, selected_dids)
 
 
 def listTables(conn):
     metadata_obj = MetaData()
     metadata_obj.reflect(bind=conn)
+    return [t.name for t in metadata_obj.sorted_tables]
+
     for t in metadata_obj.sorted_tables:
         st.write(t.name)
         
@@ -61,25 +275,34 @@ def showInputData(input_session):
     #     st.write(user)
 
     time_range = [6.25, 6.75]
-    df = db.getDASDF(session, stop_mode='Car', removeExternalZones=True, removeInternalJourneys=True, time_range=time_range)
+    df = db.getDASDF(input_session, stop_mode='Car', removeExternalZones=True, removeInternalJourneys=True, time_range=time_range)
     st.write(f'{df.shape[0]} rows in DAS table for time range {time_range}')
     st.write(df.head(100))
     
 
+@st._cache_resource
+def createInputEngineCachced():
+    return db.createInputEngine()
+
+@st._cache_resource
+def createResEngineCached():
+    return db.createResEngine()
 
 def main():
-    st.title('Hello, world!')
-
+    st.set_page_config(layout="wide")
+    st.title('AIMSUM MURSA UI')
+    st.link_button('AIMSUM Output definition', 'https://docs.aimsun.com/next/22.0.1/UsersManual/OutputDatabaseDefinition.html#mesys-table')
 
     #showCSVStats()
 
-    input_conn = db.createInputEngine()
-    res_conn = db.createResEngine()
+    input_conn = createInputEngineCachced()
+    res_conn = createResEngineCached()
 
     input_session = Session(input_conn)
     res_session = Session(res_conn)
 
-    showResults(res_session)
+    showSimulations(res_session)
+    #showResults(res_session)
 
 
 
