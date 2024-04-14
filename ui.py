@@ -177,13 +177,13 @@ def showSectionsStats(res_session, dids):
     units = MESECT_STATS[target]['units']
 
     if selSingle:
-        data = secdf[['did', 'didname', 'Time', 'oid', target]]
-        data['label'] = data['oid'].astype(str) + ', ' + data['didname']
+        data = secdf[['did', 'didlabel', 'Time', 'oid', target]]
+        data['label'] = data['oid'].astype(str) + ', ' + data['didlabel']
 
         data = data.sort_values(['oid', 'did', 'Time'])
 
         # plotly bar chart
-        fig = px.line(data, x='Time', color='didname', symbol='oid', y=target)
+        fig = px.line(data, x='Time', color='didlabel', symbol='oid', y=target)
         fig.update_layout(title=f'Section {label}', xaxis_title='Time', yaxis_title=units)
         fig.update_xaxes(
             tickformat="%H:%M", # the date format you want 
@@ -195,12 +195,12 @@ def showSectionsStats(res_session, dids):
 
     else:
         for oid in selected_oids:
-            data = secdf[secdf['oid'] == oid][['didname', 'Time', target]]
+            data = secdf[secdf['oid'] == oid][['didlabel', 'Time', target]]
 
             data = data.sort_values(['Time'])
 
             # plotly bar chart
-            fig = px.line(data, x='Time', color='didname', y=target)
+            fig = px.line(data, x='Time', color='didlabel', y=target)
             fig.update_layout(title=f'Section {oid} {label}', xaxis_title='Time', yaxis_title=units)
             fig.update_xaxes(
                 tickformat="%H:%M", # the date format you want 
@@ -292,7 +292,6 @@ def main():
     st.set_page_config(layout="wide")
     st.title('AIMSUM MURSA UI')
     st.link_button('AIMSUM Output definition', 'https://docs.aimsun.com/next/22.0.1/UsersManual/OutputDatabaseDefinition.html#mesys-table')
-
     #showCSVStats()
 
     input_conn = createInputEngineCachced()
