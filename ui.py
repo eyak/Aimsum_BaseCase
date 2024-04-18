@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 RUNS_CSV = 'runs.csv'
-
+KEYSECTIONS_CSV = 'keysections.csv'
 
 def showCSVStats():
     das = db.readDASCSV()
@@ -56,6 +56,16 @@ def readRunsCSV():
     else:
         st.warning(f'File {RUNS_CSV} not found')
         return pd.DataFrame()
+
+def readKeySectionsCSV():
+    if os.path.exists(KEYSECTIONS_CSV):
+        df = pd.read_csv(KEYSECTIONS_CSV)
+        return df
+    else:
+        st.warning(f'File {KEYSECTIONS_CSV} not found')
+        return pd.DataFrame()
+
+
 
 def showTable(session, table_name, limit = 1000):
     df = getTableDF(session, table_name)
@@ -136,27 +146,34 @@ def showWholeStats(res_session, dids):
 
 def showSectionsStats(res_session, dids):
     table = loadTable(res_session, 'MESECT')
+    keysections = readKeySectionsCSV().rename(columns={'oid': 'oid', 'name': 'oidName'})
 
-    grpoid = pd.read_sql_query(
-        select(
-            table.c.did, table.c.oid,
-            func.count('*').label('rows'),
-            func.sum(table.c.input_count).label('input_count_sum'),
-            func.avg(table.c.input_count).label('flow_capacity_avg')
-            )
-        .filter(table.c.did.in_(dids))
-        .filter(table.c.sid == 0) # total traffic only
-        .group_by(table.c.did, table.c.oid)
-        .order_by(desc("input_count_sum")),
-        res_session.bind)
+    selSectionSelector = st.selectbox('Section Selector', ['Key Sections', 'By Volume'], index=0)
 
-    # add select col
-    grpoid.insert(0, 'select', False)
+    if selSectionSelector == 'Key Sections':
+        selected_oids = st.multiselect('Select Key Sections', keysections['oid'].to_list(), keysections['oid'].to_list()[0], format_func=lambda x: f"{keysections[keysections['oid'] == x]['oidName'].values[0]} ({x})")
+        st.write(f'Selected OIDs: {selected_oids}')
+    else:
+        grpoid = pd.read_sql_query(
+            select(
+                table.c.did, table.c.oid,
+                func.count('*').label('rows'),
+                func.sum(table.c.input_count).label('input_count_sum'),
+                func.avg(table.c.input_count).label('flow_capacity_avg')
+                )
+            .filter(table.c.did.in_(dids))
+            .filter(table.c.sid == 0) # total traffic only
+            .group_by(table.c.did, table.c.oid)
+            .order_by(desc("input_count_sum")),
+            res_session.bind)
 
-    res = st.data_editor(grpoid)
+        # add select col
+        grpoid.insert(0, 'select', False)
 
-    selected_oids = set(res[res['select'] == True]['oid'].to_list())
-    st.write(f'Selected OIDs: {selected_oids}')
+        res = st.data_editor(grpoid)
+
+        selected_oids = set(res[res['select'] == True]['oid'].to_list())
+        st.write(f'Selected OIDs: {selected_oids}')
 
     secdf = pd.read_sql_query(
         select('*')
@@ -170,6 +187,10 @@ def showSectionsStats(res_session, dids):
     secdf['did'] = pd.Categorical(secdf['did'], dids)
     #secdf = df.sort_values(['did', 'ent'])
 
+    secdf = pd.merge(secdf, keysections, on='oid', how='left', validate='many_to_one')
+    secdf['oidName'] = secdf['oidName'].fillna(secdf['oid'])
+    
+
     target = st.selectbox('Variable', sorted(MESECT_STATS.keys()), index=1, format_func=lambda x: f"{x} ({MESECT_STATS[x]['label']})")
     selSingle = st.checkbox('Single Chart', True)
 
@@ -177,13 +198,13 @@ def showSectionsStats(res_session, dids):
     units = MESECT_STATS[target]['units']
 
     if selSingle:
-        data = secdf[['did', 'didlabel', 'Time', 'oid', target]]
-        data['label'] = data['oid'].astype(str) + ', ' + data['didlabel']
+        data = secdf[['did', 'didlabel', 'Time', 'oidName', target]]
+        data['label'] = data['oidName'].astype(str) + ', ' + data['didlabel']
 
-        data = data.sort_values(['oid', 'did', 'Time'])
+        data = data.sort_values(['oidName', 'did', 'Time'])
 
         # plotly bar chart
-        fig = px.line(data, x='Time', color='didlabel', symbol='oid', y=target)
+        fig = px.line(data, x='Time', color='didlabel', symbol='oidName', y=target)
         fig.update_layout(title=f'Section {label}', xaxis_title='Time', yaxis_title=units)
         fig.update_xaxes(
             tickformat="%H:%M", # the date format you want 
@@ -201,7 +222,9 @@ def showSectionsStats(res_session, dids):
 
             # plotly bar chart
             fig = px.line(data, x='Time', color='didlabel', y=target)
-            fig.update_layout(title=f'Section {oid} {label}', xaxis_title='Time', yaxis_title=units)
+            oidNames = keysections[keysections['oid'] == oid]['oidName'].values
+            oidName = oidNames[0] if len(oidNames) > 0 else oid
+            fig.update_layout(title=f"Section {oidName} ({oid}) {label}", xaxis_title='Time', yaxis_title=units)
             fig.update_xaxes(
                 tickformat="%H:%M", # the date format you want 
             )
