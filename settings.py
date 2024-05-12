@@ -3,7 +3,7 @@ from pathlib import Path
 
 MODES = ['Car']
 
-PROJECT_PATH = 'C:\\Users\\mehou\\Documents\\Aimsum\\BaseCase1122'
+PROJECT_PATH = os.path.dirname(__file__)
 
 #zones_keys_fn = os.path.join(PROJECT_PATH, 'key.csv')
 
