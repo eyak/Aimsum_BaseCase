@@ -71,16 +71,18 @@ def showTable(session, table_name, limit = 1000):
     df = getTableDF(session, table_name)
     st.write(df)
 
-def showResults(res_session):
+def showRawData(res_session):
     tables = listTables(res_session.bind)
     st.write('Existing tables ; ' + ', '.join(tables))
 
-    for table_name in ['SIM_INFO', 'META_INFO', 'META_SUB_INFO', 'MESYS', 'MESECT']:
-        st.subheader(table_name)
-        count = getTableCount(res_session, table_name)
-        st.write(f'{count:,d} rows in {table_name} table')
-        df = getTableDF(res_session, table_name, limit=1000)
-        st.write(df)
+    table_name = st.selectbox('Select Table', tables, index=0)
+
+    #for table_name in ['SIM_INFO', 'META_INFO', 'META_SUB_INFO', 'MESYS', 'MESECT']:
+    st.subheader(table_name)
+    count = getTableCount(res_session, table_name)
+    st.write(f'{count:,d} rows in {table_name} table')
+    df = getTableDF(res_session, table_name, limit=1000)
+    st.write(df)
 
 
 def mergeNameTime(res_session, df):
@@ -323,8 +325,11 @@ def main():
     input_session = Session(input_conn)
     res_session = Session(res_conn)
 
+    with st.expander('Raw Data'):
+        #showInputData(input_session)
+        showRawData(res_session)
     showSimulations(res_session)
-    #showResults(res_session)
+    
 
 
 
