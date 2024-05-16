@@ -194,6 +194,9 @@ def showSectionsStats(res_session, dids):
     secdf = pd.merge(secdf, keysections, on='oid', how='left', validate='many_to_one')
     secdf['oidName'] = secdf['oidName'].fillna(secdf['oid'])
     
+    # sort data by order of dids in the dids list
+    secdf['did'] = pd.Categorical(secdf['did'], dids)
+    secdf = secdf.sort_values(['did', 'ent'])
 
     target = st.selectbox('Variable', sorted(MESECT_STATS.keys()), index=1, format_func=lambda x: f"{x} ({MESECT_STATS[x]['label']})")
     selSingle = st.checkbox('Single Chart', True)
@@ -205,7 +208,7 @@ def showSectionsStats(res_session, dids):
         data = secdf[['did', 'didlabel', 'Time', 'oidName', target]]
         data['label'] = data['oidName'].astype(str) + ', ' + data['didlabel']
 
-        data = data.sort_values(['oidName', 'did', 'Time'])
+        data = data.sort_values(['did', 'oidName', 'Time'])
 
         # plotly bar chart
         fig = px.line(data, x='Time', color='didlabel', symbol='oidName', y=target)
@@ -222,9 +225,9 @@ def showSectionsStats(res_session, dids):
 
     else:
         for oid in selected_oids:
-            data = secdf[secdf['oid'] == oid][['didlabel', 'Time', target]]
+            data = secdf[secdf['oid'] == oid][['did', 'didlabel', 'Time', target]]
 
-            data = data.sort_values(['Time'])
+            data = data.sort_values(['did', 'Time'])
 
             # plotly bar chart
             fig = px.line(data, x='Time', color='didlabel', y=target)
