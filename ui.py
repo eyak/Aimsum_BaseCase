@@ -140,10 +140,12 @@ def showWholeStats(res_session, dids):
     )
     if logScale:
         fig.update_yaxes(type="log")
-    st.plotly_chart(fig, config = {'toImageButtonOptions': {
-            'scale': 2,
-            'filename': f'{target} - dids {" ".join(map(str,dids))} Overall'
-        }})
+    st.plotly_chart(fig, 
+            config = {'toImageButtonOptions': {
+                'scale': 2,
+                'filename': f'{target} - dids {" ".join(map(str,dids))} Overall'
+            }},
+            use_container_width=True)
         
 
 def showSectionsStats(res_session, dids):
@@ -211,10 +213,12 @@ def showSectionsStats(res_session, dids):
         fig.update_xaxes(
             tickformat="%H:%M", # the date format you want 
         )
-        st.plotly_chart(fig, config = {'toImageButtonOptions': {
-            'scale': 2,
-            'filename': f'{target} - dids {" ".join(map(str,dids))} - oids {" ".join(map(str,selected_oids))}'
-        }})
+        st.plotly_chart(fig, 
+            config = {'toImageButtonOptions': {
+                'scale': 2,
+                'filename': f'{target} - dids {" ".join(map(str,dids))} - oids {" ".join(map(str,selected_oids))}'
+            }},
+            use_container_width=True)
 
     else:
         for oid in selected_oids:
@@ -230,7 +234,7 @@ def showSectionsStats(res_session, dids):
             fig.update_xaxes(
                 tickformat="%H:%M", # the date format you want 
             )
-            st.plotly_chart(fig)
+            st.plotly_chart(fig, use_container_width=True)
 
     #st.write(secdf)
 
@@ -260,7 +264,15 @@ def showSimulations(res_session):
         df.loc[df['did'].isin(selected_dids), 'show order'] = df[df['did'].isin(selected_dids)].apply(lambda row: selected_dids.index(row['did'])+1, axis=1)
 
     
-    res = st.data_editor(df[['show order', 'did', 'didlabel', 'comments', 'didname', 'scname', 'exec_date', 'exec_duration']], key='diddata')
+    res = st.data_editor(df[['show order', 'did', 'didlabel', 'comments', 'didname', 'scname', 'exec_date', 'exec_duration']],
+                         key='diddata',
+                         use_container_width=True,
+                         column_config={
+                             'show order': st.column_config.SelectboxColumn(
+                                 options=list(range(11)),
+                             )
+                         }
+                        )
 
     selected_dids = res[res['show order'] > 0].sort_values('show order')['did'].to_list()
 
