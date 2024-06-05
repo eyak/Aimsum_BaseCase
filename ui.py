@@ -9,7 +9,9 @@ from resmodel import MESYS
 import pandas as pd
 from settings import *
 import plotly.express as px
+import plotly.graph_objects as go
 from aimsumtables import *
+from externalspeeds import getSpeeds
 #import sqlite3
 
 # some warning bug in streamlit
@@ -73,14 +75,28 @@ def showTable(session, table_name, limit = 1000):
 
 def showResults(res_session):
     tables = listTables(res_session.bind)
-    st.write('Existing tables ; ' + ', '.join(tables))
 
-    for table_name in ['SIM_INFO', 'META_INFO', 'META_SUB_INFO', 'MESYS', 'MESECT']:
-        st.subheader(table_name)
-        count = getTableCount(res_session, table_name)
-        st.write(f'{count:,d} rows in {table_name} table')
-        df = getTableDF(res_session, table_name, limit=1000)
-        st.write(df)
+    selTable = st.selectbox('Select Table', tables, index=tables.index('SIM_INFO'))
+    st.subheader(selTable)
+    count = getTableCount(res_session, selTable)
+    st.write(f'{count:,d} rows. Showing first 1000 rows.')
+
+    table = loadTable(res_session, selTable)
+
+    if 'did' in table.columns:
+        dids = pd.read_sql_query(
+            select(table.c.did)
+            .distinct(),
+            res_session.bind)['did'].to_list()
+
+        seldid = st.selectbox('Select DID', dids, index=0)
+
+        df = pd.read_sql_query(select(table).filter(table.c.did == seldid).limit(1000), res_session.bind)
+            #res_session.query(table).limit(1000).statement, res_session.bind)
+    else:
+        df = getTableDF(res_session, selTable, limit=1000)
+    
+    st.write(df)
 
 
 def mergeNameTime(res_session, df):
@@ -151,8 +167,8 @@ def showSectionsStats(res_session, dids):
     selSectionSelector = st.selectbox('Section Selector', ['Key Sections', 'By Volume'], index=0)
 
     if selSectionSelector == 'Key Sections':
-        selected_oids = st.multiselect('Select Key Sections', keysections['oid'].to_list(), keysections['oid'].to_list()[0], format_func=lambda x: f"{keysections[keysections['oid'] == x]['oidName'].values[0]} ({x})")
-        st.write(f'Selected OIDs: {selected_oids}')
+        selected_oids = st.multiselect('Select Key Sections', keysections['oid'].to_list(), keysections['oid'].to_list(), format_func=lambda x: f"{keysections[keysections['oid'] == x]['oidName'].values[0]} ({x})")
+        #st.write(f'Selected OIDs: {selected_oids}')
     else:
         grpoid = pd.read_sql_query(
             select(
@@ -190,9 +206,26 @@ def showSectionsStats(res_session, dids):
     secdf = pd.merge(secdf, keysections, on='oid', how='left', validate='many_to_one')
     secdf['oidName'] = secdf['oidName'].fillna(secdf['oid'])
     
+    variables = sorted(MESECT_STATS.keys())
+    target = st.selectbox('Variable', variables, index=variables.index('speed'), format_func=lambda x: f"{x} ({MESECT_STATS[x]['label']})")
+    
+    logScale = st.checkbox('Log Scale', False, key='logScaleSections')
+    selSingle = st.checkbox('Single Chart', False)
+    selSlidingWindow = st.selectbox('Sliding Window Gaussian Smoothing', [0, 2, 3, 4, 6, 8], index=3)
 
-    target = st.selectbox('Variable', sorted(MESECT_STATS.keys()), index=1, format_func=lambda x: f"{x} ({MESECT_STATS[x]['label']})")
-    selSingle = st.checkbox('Single Chart', True)
+    if target == 'speed':
+        selExternalSpeed = st.checkbox('External Speeds', True)
+    else:
+        selExternalSpeed = False
+
+    if selExternalSpeed:
+        gids = keysections['gid']
+        speeds = getSpeeds(gids)
+        speeds = speeds.melt(id_vars='ID', var_name='Time', value_name='speed')
+        speeds['Time'] = speeds['Time'].str.replace('SPD_', '').astype(int)
+        speeds = speeds.rename(columns={'ID': 'gid'})
+        speeds = speeds.sort_values(['gid', 'Time'])
+        #st.write(speeds)
 
     label = MESECT_STATS[target]['label']
     units = MESECT_STATS[target]['units']
@@ -209,26 +242,97 @@ def showSectionsStats(res_session, dids):
         fig.update_xaxes(
             tickformat="%H:%M", # the date format you want 
         )
+
+        if logScale:
+            fig.update_yaxes(type="log")
+
         st.plotly_chart(fig, config = {'toImageButtonOptions': {
             'scale': 2,
             'filename': f'{target} - dids {" ".join(map(str,dids))} - oids {" ".join(map(str,selected_oids))}'
         }})
 
     else:
-        for oid in selected_oids:
+        cmpTable = []
+        for i,oid in enumerate(selected_oids):
             data = secdf[secdf['oid'] == oid][['didlabel', 'Time', target]]
+            
+            if data.empty:
+                continue
 
             data = data.sort_values(['Time'])
 
+            if selSlidingWindow > 0:
+                data[target] = data.groupby('didlabel')[target].transform(lambda x: x.rolling(
+                    window=selSlidingWindow,
+                    win_type='exponential',
+                    min_periods=1,
+                    center=True).mean())
+            
+            # get the date component from first row
+            date = data['Time'].iloc[0].date()
+            
             # plotly bar chart
             fig = px.line(data, x='Time', color='didlabel', y=target)
             oidNames = keysections[keysections['oid'] == oid]['oidName'].values
             oidName = oidNames[0] if len(oidNames) > 0 else oid
+
+            if selExternalSpeed:
+                gid = keysections[keysections['oid'] == oid]['gid'].values[0]
+                speedData = speeds[speeds['gid'] == gid]
+
+                # convert time to datetime using date 
+                speedData['Time'] = pd.to_datetime(date) + pd.to_timedelta(speedData['Time'], unit='h')
+                
+                fig.add_trace(go.Scatter(
+                    x=speedData['Time'],
+                    y=speedData['speed'],
+                    mode='lines+markers',
+                    name='External Speed'))
+
+                
+
+                for didlabel in data['didlabel'].unique():
+                    didData = data[data['didlabel'] == didlabel]
+                    speedDidData = speedData[speedData['Time'].isin(didData['Time'])]
+                    didData = didData[didData['Time'].isin(speedDidData['Time'])]
+                    
+                    vspeed= speedDidData['speed'].reset_index(drop=True)
+                    vdata = didData[target].reset_index(drop=True)
+                    if len(vspeed) > 0:
+                        corr = vspeed.corr(vdata, method='pearson')
+                        
+                        rmse = ((vspeed - vdata) ** 2).mean() ** .5
+                        
+                        # add corr and rmse to cmpTable
+                        cmpTable.append({'didlabel': didlabel, 'oidName': oidName, 'corr': corr, 'rmse': rmse})
+
             fig.update_layout(title=f"Section {oidName} ({oid}) {label}", xaxis_title='Time', yaxis_title=units)
             fig.update_xaxes(
                 tickformat="%H:%M", # the date format you want 
             )
+
+            if logScale:
+                fig.update_yaxes(type="log")
+
             st.plotly_chart(fig)
+
+        if cmpTable:
+            cmpdf = pd.DataFrame(cmpTable)
+            #st.write(cmpdf)
+
+            # convert to pivot table of didlabel vs oidName
+            for value in ['corr', 'rmse']:
+                cmpdfpivot = cmpdf.pivot(index='didlabel', columns='oidName', values=value)
+                # add average colomn
+                cmpdfpivot['Average'] = cmpdfpivot.mean(axis=1)
+                fig = px.imshow(
+                    cmpdfpivot, 
+                    color_continuous_scale='RdYlGn' if value == 'corr' else 'Reds',
+                    title=value)
+                st.plotly_chart(fig)
+            #cmpdf = cmpdf.pivot(index='didlabel', columns='oidName', values='corr')
+
+        
 
     #st.write(secdf)
 
@@ -252,7 +356,7 @@ def showSimulations(res_session):
     df.insert(0, 'show order', 0)
 
     if 'selected_dids' in st.session_state:
-        print('selected_dids', st.session_state['selected_dids'])
+        #print('selected_dids', st.session_state['selected_dids'])
         selected_dids = st.session_state['selected_dids']
 
         df.loc[df['did'].isin(selected_dids), 'show order'] = df[df['did'].isin(selected_dids)].apply(lambda row: selected_dids.index(row['did'])+1, axis=1)
@@ -262,7 +366,7 @@ def showSimulations(res_session):
 
     selected_dids = res[res['show order'] > 0].sort_values('show order')['did'].to_list()
 
-    st.write(f'Selected DIDs: {selected_dids}')
+    #st.write(f'Selected DIDs: {selected_dids}')
     if st.button('Save Selection'):
         st.session_state['selected_dids'] = selected_dids
 
@@ -314,6 +418,7 @@ def createResEngineCached():
 def main():
     st.set_page_config(layout="wide")
     st.title('AIMSUM MURSA UI')
+    st.markdown("Welcome to the AIMSUM's *Multifaceted Unified Residual System Analysis* UI")
     st.link_button('AIMSUM Output definition', 'https://docs.aimsun.com/next/22.0.1/UsersManual/OutputDatabaseDefinition.html#mesys-table')
     #showCSVStats()
 
@@ -323,8 +428,10 @@ def main():
     input_session = Session(input_conn)
     res_session = Session(res_conn)
 
+    with st.expander('Raw Results'):
+        showResults(res_session)
+    
     showSimulations(res_session)
-    #showResults(res_session)
 
 
 

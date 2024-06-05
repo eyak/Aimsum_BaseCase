@@ -21,3 +21,5 @@ START_TIMES_RANGE = list(range(6, 24))
 START_TIMES_RANGE = START_TIMES_RANGE[0:4]
 
 EXTERNAL_ZONES = [41,42,43]
+
+SPEED_INPUT_FN = 'proprietary/ExternalSpeed.dbf'

@@ -1,12 +1,28 @@
-oid,name
-2944,20 S - Near Arlozerov
-2945,20 N - Near Arlozerov
-9946,20 N - Near Kumemiut
-11300132,20 S - Near Kumemiut
-98628,4 N - Near Bar Ilan
-98620,4 S - Near Bar Ilan
-335962,5 W - Near Glilot
-13490,5 E - Near Glilot
-79201,Even Gvirol N - Near Pinkas
-1199,Even Gvirol S - Nar Pinkas
+oid,gid,name
+486,416878,Namir/Rokach N
+485,416843,Namir/Rokach S
+2945,410758,20/Arlozerov N
+2944,410728,20/Arlozerov S
+9946,424224,1/Kibbutz Galuyot N
+11300132,424128,1/Kibbutz Galuyot S
+4904,384503,20/Dov Hoz N
+5607,384621,20/Dov Hoz S
+5568,393184,4/Holon N
+333289,393224,4/Holon S
+9940,425922,4/Mesubim N
+9943,425967,4/Mesubim S
+3335,426004,461/Mesubim E
+86320,426072,461/Mesubim W
+12747,503075,471/Gat Rimon E
+10731,503363,471/Gat Rimon W
+3869,448814,4/Bar Ilan N
+3807,449291,4/Bar Ilan S
+11631,457647,Zabotinsky/Shenkar	E
+11632,457714,Zabotinsky/Shenkar W
+3511,455803,4/Geha N
+418098,456466,4/Geha S
+13490,465026,5/Glilot E
+335962,465667,5/Glilot W
+79201,,Even Gvirol N - Near Pinkas
+1199,,Even Gvirol S - Nar Pinkas
 
