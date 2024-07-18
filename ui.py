@@ -73,7 +73,7 @@ def showTable(session, table_name, limit = 1000):
     df = getTableDF(session, table_name)
     st.write(df)
 
-def showResults(res_session):
+def showRawData(res_session):
     tables = listTables(res_session.bind)
 
     selTable = st.selectbox('Select Table', tables, index=tables.index('SIM_INFO'))
@@ -154,10 +154,12 @@ def showWholeStats(res_session, dids):
     )
     if logScale:
         fig.update_yaxes(type="log")
-    st.plotly_chart(fig, config = {'toImageButtonOptions': {
-            'scale': 2,
-            'filename': f'{target} - dids {" ".join(map(str,dids))} Overall'
-        }})
+    st.plotly_chart(fig, 
+            config = {'toImageButtonOptions': {
+                'scale': 2,
+                'filename': f'{target} - dids {" ".join(map(str,dids))} Overall'
+            }},
+            use_container_width=True)
         
 
 def showSectionsStats(res_session, dids):
@@ -234,7 +236,7 @@ def showSectionsStats(res_session, dids):
         data = secdf[['did', 'didlabel', 'Time', 'oidName', target]]
         data['label'] = data['oidName'].astype(str) + ', ' + data['didlabel']
 
-        data = data.sort_values(['oidName', 'did', 'Time'])
+        data = data.sort_values(['did', 'oidName', 'Time'])
 
         # plotly bar chart
         fig = px.line(data, x='Time', color='didlabel', symbol='oidName', y=target)
@@ -259,7 +261,7 @@ def showSectionsStats(res_session, dids):
             if data.empty:
                 continue
 
-            data = data.sort_values(['Time'])
+            data = data.sort_values(['did', 'Time'])
 
             if selSlidingWindow > 0:
                 data[target] = data.groupby('didlabel')[target].transform(lambda x: x.rolling(
@@ -366,7 +368,15 @@ def showSimulations(res_session):
         df.loc[df['did'].isin(selected_dids), 'show order'] = df[df['did'].isin(selected_dids)].apply(lambda row: selected_dids.index(row['did'])+1, axis=1)
 
     
-    res = st.data_editor(df[['show order', 'did', 'didlabel', 'comments', 'didname', 'scname', 'exec_date', 'exec_duration']], key='diddata')
+    res = st.data_editor(df[['show order', 'did', 'didlabel', 'comments', 'didname', 'scname', 'exec_date', 'exec_duration']],
+                         key='diddata',
+                         use_container_width=True,
+                         column_config={
+                             'show order': st.column_config.SelectboxColumn(
+                                 options=list(range(11)),
+                             )
+                         }
+                        )
 
     selected_dids = res[res['show order'] > 0].sort_values('show order')['did'].to_list()
 
