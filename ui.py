@@ -113,6 +113,9 @@ def mergeNameTime(res_session, df):
 
 def showWholeStats(res_session, dids):
     df = getTableDF(res_session, 'MESYS')
+    dfcam = getTableDF(res_session, 'MESYSCAM')
+
+    df = pd.merge(df, dfcam, on=['did', 'oid', 'eid', 'sid', 'ent'], how='left', validate='one_to_one')
 
     # filter by dids
     df = df[df['did'].isin(dids)]

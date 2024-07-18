@@ -49,6 +49,19 @@ class MESYS(Base):
     # lane_changes_D = Column(Integer, nullable=False, comment='Number of lane changes/km')
     # total_lane_changes = Column(Integer, nullable=False, comment='Number of lane changes')
 
-
     def __repr__(self) -> str:
         return f"MESYS(did={self.did!r}, oid={self.oid!r}, eid={self.eid!r}, sid={self.sid!r}, ent={self.ent!r}), density={self.density!r}, density_D={self.density_D!r}, flow={self.flow!r}, flow_D={self.flow_D!r})"
+    
+    
+class MESYSCAM(Base):
+    __tablename__ = 'MESYSCAM'
+
+    did = Column(Integer, primary_key=True, comment='Replication identifier (Origin Data ID)')
+    oid = Column(Integer, nullable=False, comment='Object ID')
+    eid = Column(CHAR, nullable=True, comment='External ID (optional)')
+    ent = Column(Integer, nullable=False, comment='Entry number')
+    NbDeleted = Column(Integer, nullable=False, )
+    NbDeleted_D = Column(Integer, nullable=False, )
+    NbStationary = Column(Integer, nullable=False, )
+    NbStationary_D = Column(Integer, nullable=False, )
+

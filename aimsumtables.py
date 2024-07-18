@@ -21,6 +21,8 @@ MESYS_STATS = {
         'total_lane_changes': {'label': 'Number of lane changes', 'units': 'count'},  
         'gridlock_vehs': {'label': 'Number of vehicles in gridlock (Undocumented)', 'units': 'count'},
         'vWait': {'label': 'Number of vehicles waiting to enter into the system', 'units': 'count'},
+        'NbDeleted': {'label': 'Number of deleted vehicles (?) from MESYSCAM', 'units': 'count'},
+        'NbStationary': {'label': 'Number of stationary vehicles (?) from MESYSCAM', 'units': 'count'},
         }
 
 MESECT_STATS = {
