@@ -217,8 +217,10 @@ def showSectionsStats(res_session, dids):
 
     if target == 'speed':
         selExternalSpeed = st.checkbox('External Speeds', True)
+        selInterpolate = st.checkbox('Interpolate External Speeds', True)
     else:
         selExternalSpeed = False
+        selInterpolate = False
 
     if selExternalSpeed:
         gids = keysections['gid']
@@ -285,21 +287,47 @@ def showSectionsStats(res_session, dids):
                 # convert time to datetime using date 
                 speedData['Time'] = pd.to_datetime(date) + pd.to_timedelta(speedData['Time'], unit='h')
                 
+                if selInterpolate:
+                    # find times missing in speedData
+                    missingTimes = data[~data['Time'].isin(speedData['Time'])]['Time'].unique()
+                    # concat the times missing in speedData with NaN speed
+                    speedDataInterpolated = pd.concat([speedData, pd.DataFrame({'Time': missingTimes, 'speed': [None]*len(missingTimes)})]).sort_values('Time')
+
+                    # set index to Time
+                    speedDataInterpolated = speedDataInterpolated.set_index('Time')
+
+                    # interpolate speed data using times
+                    speedDataInterpolated['speed'] = speedDataInterpolated['speed'].interpolate(method='time')
+
+                    # reset Time as column
+                    speedDataInterpolated['Time'] = speedDataInterpolated.index
+                    speedDataInterpolated.reset_index(drop=True, inplace=True)
+
+                    speedData = speedDataInterpolated
+
+
+                
                 fig.add_trace(go.Scatter(
                     x=speedData['Time'],
                     y=speedData['speed'],
                     mode='lines+markers',
-                    name='External Speed'))
+                    line=dict(color='orange', dash='dot'),
+                    #marker=dict(size=2),
+                    name=f'External Speed {"interpolated" if selInterpolate else ""}'))
 
                 
 
                 for didlabel in data['didlabel'].unique():
+                    #st.write(didlabel)
                     didData = data[data['didlabel'] == didlabel]
+
                     speedDidData = speedData[speedData['Time'].isin(didData['Time'])]
-                    didData = didData[didData['Time'].isin(speedDidData['Time'])]
-                    
+                    didData = didData[didData['Time'].isin(speedData['Time'])]
+
                     vspeed= speedDidData['speed'].reset_index(drop=True)
                     vdata = didData[target].reset_index(drop=True)
+
+                    #st.dataframe(pd.DataFrame({'external': vspeed, 'data': vdata}))
                     if len(vspeed) > 0:
                         corr = vspeed.corr(vdata, method='pearson')
                         
@@ -330,11 +358,15 @@ def showSectionsStats(res_session, dids):
                 valueDesc = 'Correlation' if value == 'corr' else 'RMSE'
                 cmpdfpivot = cmpdf.pivot(index='didlabel', columns='oidName', values=value)
                 # add average colomn
-                cmpdfpivot['Average'] = cmpdfpivot.mean(axis=1)
+                mean = cmpdfpivot.mean(axis=1)
+                median = cmpdfpivot.median(axis=1)
+                cmpdfpivot['Mean'] = mean
+                cmpdfpivot['Median'] = median
                 fig = px.imshow(
                     cmpdfpivot, 
                     color_continuous_scale='RdYlGn' if value == 'corr' else 'Reds',
-                    title=f'{valueDesc} with External Speeds',)
+                    title=f'{valueDesc} with External Speeds {"interpolated" if selInterpolate else ""}'
+                )
                 st.plotly_chart(fig)
             #cmpdf = cmpdf.pivot(index='didlabel', columns='oidName', values='corr')
 
