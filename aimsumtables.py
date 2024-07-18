@@ -19,6 +19,8 @@ MESYS_STATS = {
         'traveltime': {'label': 'Total travel time experienced', 'units': 'hours'},
         'lane_changes': {'label': 'Number of lane changes / Number of veh', 'units': 'count'},
         'total_lane_changes': {'label': 'Number of lane changes', 'units': 'count'},  
+        'gridlock_vehs': {'label': 'Number of vehicles in gridlock (Undocumented)', 'units': 'count'},
+        'vWait': {'label': 'Number of vehicles waiting to enter into the system', 'units': 'count'},
         }
 
 MESECT_STATS = {
