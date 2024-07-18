@@ -261,7 +261,7 @@ def showSectionsStats(res_session, dids):
             if data.empty:
                 continue
 
-            data = data.sort_values(['did', 'Time'])
+            data = data.sort_values(['didlabel', 'Time'])
 
             if selSlidingWindow > 0:
                 data[target] = data.groupby('didlabel')[target].transform(lambda x: x.rolling(
@@ -443,7 +443,7 @@ def main():
     res_session = Session(res_conn)
 
     with st.expander('Raw Results'):
-        showResults(res_session)
+        showRawData(res_session)
     
     showSimulations(res_session)
 
