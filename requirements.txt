@@ -4,3 +4,4 @@ plotly
 streamlit
 dbfread
 scipy
+tqdm
