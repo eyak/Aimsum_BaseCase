@@ -30,6 +30,8 @@ gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
     # via streamlit
+greenlet==3.0.3
+    # via sqlalchemy
 idna==3.7
     # via requests
 jinja2==3.1.4
@@ -99,6 +101,8 @@ six==1.16.0
     # via python-dateutil
 smmap==5.0.1
     # via gitdb
+sqlalchemy==2.0.31
+    # via -r requirements.in
 streamlit==1.36.0
     # via -r requirements.in
 tenacity==8.5.0
@@ -116,6 +120,7 @@ tqdm==4.66.4
 typing-extensions==4.12.2
     # via
     #   altair
+    #   sqlalchemy
     #   streamlit
 tzdata==2024.1
     # via pandas
