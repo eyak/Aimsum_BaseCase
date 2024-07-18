@@ -320,15 +320,19 @@ def showSectionsStats(res_session, dids):
             cmpdf = pd.DataFrame(cmpTable)
             #st.write(cmpdf)
 
+            # filter the df by time
+            
+
             # convert to pivot table of didlabel vs oidName
             for value in ['corr', 'rmse']:
+                valueDesc = 'Correlation' if value == 'corr' else 'RMSE'
                 cmpdfpivot = cmpdf.pivot(index='didlabel', columns='oidName', values=value)
                 # add average colomn
                 cmpdfpivot['Average'] = cmpdfpivot.mean(axis=1)
                 fig = px.imshow(
                     cmpdfpivot, 
                     color_continuous_scale='RdYlGn' if value == 'corr' else 'Reds',
-                    title=value)
+                    title=f'{valueDesc} with External Speeds',)
                 st.plotly_chart(fig)
             #cmpdf = cmpdf.pivot(index='didlabel', columns='oidName', values='corr')
 
@@ -353,7 +357,7 @@ def showSimulations(res_session):
     df = pd.merge(df, runs, left_on='did', right_on='did', how='left', validate='one_to_one')
 
     # add select boolean column as first col
-    df.insert(0, 'show order', 0)
+    #df.insert(0, 'show order', 0)
 
     if 'selected_dids' in st.session_state:
         #print('selected_dids', st.session_state['selected_dids'])
