@@ -21,6 +21,7 @@ warnings.filterwarnings('ignore')
 
 RUNS_CSV = 'runs.csv'
 KEYSECTIONS_CSV = 'keysections.csv'
+QUESTIONS_CSV = 'questions.csv'
 
 def showCSVStats():
     das = db.readDASCSV()
@@ -57,6 +58,14 @@ def readRunsCSV():
         return df
     else:
         st.warning(f'File {RUNS_CSV} not found')
+        return pd.DataFrame()
+
+def readQuestionsCSV():
+    if os.path.exists(QUESTIONS_CSV):
+        df = pd.read_csv(QUESTIONS_CSV)
+        return df
+    else:
+        st.warning(f'File {QUESTIONS_CSV} not found')
         return pd.DataFrame()
 
 def readKeySectionsCSV():
@@ -386,7 +395,7 @@ def getSimulations(res_session):
     df['exec_duration'] = df['exec_date_end'] - df['exec_date']
     return df
 
-def showSimulations(res_session):
+def showSimulations(res_session, didlist):
     df = getSimulations(res_session)
 
     runs = readRunsCSV()
@@ -396,11 +405,11 @@ def showSimulations(res_session):
     # add select boolean column as first col
     #df.insert(0, 'show order', 0)
 
-    if 'selected_dids' in st.session_state:
-        #print('selected_dids', st.session_state['selected_dids'])
-        selected_dids = st.session_state['selected_dids']
-
-        df.loc[df['did'].isin(selected_dids), 'show order'] = df[df['did'].isin(selected_dids)].apply(lambda row: selected_dids.index(row['did'])+1, axis=1)
+    if didlist:
+        #selected_dids = st.session_state['selected_dids']
+        df['show order'] = None
+        df.loc[df['did'].isin(didlist), 'show order'] = df[df['did'].isin(didlist)].apply(lambda row: didlist.index(row['did'])+1, axis=1)
+    
 
     
     res = st.data_editor(df[['show order', 'did', 'didlabel', 'comments', 'didname', 'scname', 'exec_date', 'exec_duration']],
@@ -416,8 +425,17 @@ def showSimulations(res_session):
     selected_dids = res[res['show order'] > 0].sort_values('show order')['did'].to_list()
 
     #st.write(f'Selected DIDs: {selected_dids}')
-    if st.button('Save Selection'):
-        st.session_state['selected_dids'] = selected_dids
+    with st.expander('Save Question'):
+        question_name = st.text_input('Question Name')
+        
+        if st.button('Save'):
+            questions = readQuestionsCSV()
+            new_question = pd.DataFrame([{'question': question_name, 'didlist': '/'.join(map(str, selected_dids))}])
+            questions = pd.concat([questions, new_question], ignore_index=True)
+            questions.to_csv(QUESTIONS_CSV, index=False)
+            st.success('Question saved')
+
+        
 
 
     tab1, tab2 = st.tabs(['Whole Stats', 'Sections Stats'])
@@ -464,6 +482,19 @@ def createInputEngineCachced():
 def createResEngineCached():
     return db.createResEngine()
 
+def showQuestions():
+    questions = readQuestionsCSV()
+
+    sel_question = st.selectbox('Select Question', [None] + questions['question'].to_list())
+    if sel_question:
+        sel_didlist = questions[questions['question'] == sel_question]['didlist'].values[0]
+        sel_didlist = sel_didlist.split('/')
+        sel_didlist = list(map(int, sel_didlist))
+
+        return sel_didlist
+
+    return []
+
 def main():
     st.set_page_config(layout="wide")
     st.title('AIMSUM MURSA UI')
@@ -480,7 +511,8 @@ def main():
     with st.expander('Raw Results'):
         showRawData(res_session)
     
-    showSimulations(res_session)
+    didlist = showQuestions()
+    showSimulations(res_session, didlist)
 
 
 
