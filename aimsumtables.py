@@ -21,8 +21,8 @@ MESYS_STATS = {
         'total_lane_changes': {'label': 'Number of lane changes', 'units': 'count'},  
         'gridlock_vehs': {'label': 'Number of vehicles in gridlock (Undocumented)', 'units': 'count'},
         'vWait': {'label': 'Number of vehicles waiting to enter into the system', 'units': 'count'},
-        'NbDeleted': {'label': 'Number of deleted vehicles (?) from MESYSCAM', 'units': 'count'},
-        'NbStationary': {'label': 'Number of stationary vehicles (?) from MESYSCAM', 'units': 'count'},
+        'NbDeleted': {'label': 'Number of deleted vehicles', 'units': 'count'},
+        'NbStationary': {'label': 'Number of stationary vehicles', 'units': 'count'},
         }
 
 MESECT_STATS = {
@@ -40,6 +40,8 @@ MESECT_STATS = {
         'qmean': {'label': 'Mean Queue Length by lane', 'units': 'veh'},
         'traveltime': {'label': 'Total travel time experienced in the section', 'units': 'secs'},
         'lane_changes': {'label': 'Number of lane changes / Number of veh', 'units': 'count'},
-        'total_lane_changes': {'label': 'Number of lane changes', 'units': 'count'},  
+        'total_lane_changes': {'label': 'Number of lane changes', 'units': 'count'},
+        'NbDeleted': {'label': 'Number of deleted vehicles', 'units': 'count'},
+        'NbStationary': {'label': 'Number of stationary vehicles', 'units': 'count'},
         }
 
