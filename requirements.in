@@ -6,3 +6,4 @@ dbfread
 scipy
 tqdm
 sqlalchemy
+python-dotenv
