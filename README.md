@@ -105,6 +105,8 @@ To speed up convergence, the scenario is set up to incrementally add vehicles an
 
 # Map Changelog
 - 24/7/24 After run 18401625 noticed that there is a missing lane at section 17454967, added the lane to the turn, and there was not alocated phase for this turn at the control plan. Added a phase without increasing overall cycle.
+- 24/7/24 Connecting centroid 18402713 south into neighborhod to avoid no route warning.
+
 
 
 # Status
