@@ -103,6 +103,10 @@ To speed up convergence, the scenario is set up to incrementally add vehicles an
 - Generate OD Matrices by running BuildMatrixFromPreDayExternal
 - Add matrices to Demand data (Traffice demands\ Das Demand) ![Demand setup](images/Demand%20data.png)
 
+# Map Changelog
+- 24/7/24 After run 18401625 noticed that there is a missing lane at section 17454967, added the lane to the turn, and there was not alocated phase for this turn at the control plan. Added a phase without increasing overall cycle.
+
+
 # Status
 
 ## BUGS
