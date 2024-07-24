@@ -176,7 +176,11 @@ def showWholeStats(res_session, dids):
 
 def showSectionsStats(res_session, dids):
     table = loadTable(res_session, 'MESECT')
-    keysections = readKeySectionsCSV().rename(columns={'oid': 'oid', 'name': 'oidName'})
+    seccam = loadTable(res_session, 'MESECTCAM')
+    #sectcamdf = getTableDF(res_session, 'MESECTCAM')
+    #table = pd.merge(table, sectcamdf, on=['did', 'oid', 'eid', 'sid', 'ent'], how='left', validate='one_to_one')
+
+    keysections = readKeySectionsCSV().rename(columns={'name': 'oidName'})
 
     selSectionSelector = st.selectbox('Section Selector', ['Key Sections', 'By Volume'], index=0)
 
@@ -212,6 +216,16 @@ def showSectionsStats(res_session, dids):
         .filter(table.c.ent != 0) # ignore aggregated data
         .filter(table.c.oid.in_(selected_oids)) ,
         res_session.bind)
+    
+    seccamdf = pd.read_sql_query(
+        select('*')
+        .filter(seccam.c.did.in_(dids))
+        .filter(seccam.c.sid == 0) # total traffic only
+        .filter(seccam.c.ent != 0) # ignore aggregated data
+        .filter(seccam.c.oid.in_(selected_oids)) ,
+        res_session.bind)
+    
+    secdf = pd.merge(secdf, seccamdf, on=['did', 'oid', 'eid', 'sid', 'ent'], how='left', validate='one_to_one')
 
     secdf = mergeNameTime(res_session, secdf)
     secdf['did'] = pd.Categorical(secdf['did'], dids)
