@@ -1,4 +1,11 @@
-# Software Installation
+# Repo Contents
+## ui.py tools for analyzing Aimsum results.
+To use:
+* pip install -r requirements.txt
+* streamlit run ui.py
+
+## Aimsum script tools - meant to be used within Aimsum# Software Installation
+
 ## License
 Apply for a license on Aimsum’s [form](https://www.aimsun.com/academic/student-edition/).
 
