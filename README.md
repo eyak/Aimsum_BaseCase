@@ -6,6 +6,7 @@ To use:
 
 ## Aimsum script tools - meant to be used within Aimsum# Software Installation
 
+# Aimsum Installation
 ## License
 Apply for a license on Aimsum’s [form](https://www.aimsun.com/academic/student-edition/).
 
