@@ -4,7 +4,18 @@ To use:
 * pip install -r requirements.txt
 * streamlit run ui.py
 
-## Aimsum script tools - meant to be used within Aimsum# Software Installation
+## Aimsum script tools
+Used within Aimsum to add various capabilites
+### demo_aimsum_script
+Shows the basic aimsum script
+### BuildMatrixFromPreDay.py
+Import matrix from external pre day data (from SimMobility)
+
+## Aimsum running framework
+Used to run aimsum progrematically, possibly invoking custom script tools. 
+*Incomplete*
+
+# Software Installation
 
 # Aimsum Installation
 ## License
